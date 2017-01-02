@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
 this repository contains the full copyright notices and license terms. -->
-<form string="Mandate">
+<form>
     <label name="party"/>
     <field name="party"/>
     <label name="account_number"/>
@@ -15,6 +15,8 @@ this repository contains the full copyright notices and license terms. -->
     <field name="signature_date"/>
     <label name="type"/>
     <field name="type"/>
+    <label name="sequence_type_rcur"/>
+    <field name="sequence_type_rcur"/>
     <label name="scheme"/>
     <field name="scheme"/>
     <newline/>

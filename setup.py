@@ -47,7 +47,7 @@ if minor_version % 2:
         'hg+http://hg.tryton.org/modules/%s#egg=%s-%s' % (
             name[8:], name, version))
 
-requires = ['Genshi', 'lxml', 'python-dateutil']
+requires = ['Genshi', 'lxml', 'python-dateutil', 'python-stdnum >= 1.0']
 for dep in info.get('depends', []):
     if not re.match(r'(ir|res)(\W|$)', dep):
         requires.append(get_require_version('trytond_%s' % dep))
@@ -98,6 +98,7 @@ setup(name=name,
         'Natural Language :: German',
         'Natural Language :: Hungarian',
         'Natural Language :: Italian',
+        'Natural Language :: Polish',
         'Natural Language :: Portuguese (Brazilian)',
         'Natural Language :: Russian',
         'Natural Language :: Slovenian',

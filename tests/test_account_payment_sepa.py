@@ -28,18 +28,19 @@ def setup_environment():
     Address = pool.get('party.address')
     Party = pool.get('party.party')
     Bank = pool.get('bank')
+    Identifier = pool.get('party.identifier')
 
     currency = create_currency('EUR')
     company = create_company(currency=currency)
-    company.party.sepa_creditor_identifier = 'BE68539007547034'
-    company.party.save()
+    sepa = Identifier(party=company.party, code='ES23ZZZ47690558N',
+        type='sepa')
+    sepa.save()
     bank_party = Party(name='European Bank')
     bank_party.save()
     bank = Bank(party=bank_party, bic='BICODEBBXXX')
     bank.save()
     customer = Party(name='Customer')
-    address = Address(street='street', streetbis='street bis',
-        zip='1234', city='City')
+    address = Address(street='street', zip='1234', city='City')
     customer.addresses = [address]
     customer.save()
     return {
@@ -79,6 +80,7 @@ def setup_mandate(company, customer, account):
                 'account_number': account.numbers[0],
                 'identification': 'MANDATE',
                 'type': 'recurrent',
+                'sequence_type_rcur': False,
                 'signature_date': Date.today(),
                 'state': 'validated',
                 }])[0]
@@ -247,6 +249,53 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
                         }])
 
     @with_transaction()
+    def test_sepa_identifier_unique(self):
+        'Test SEPA Creditor Identifier uniqueness'
+        pool = Pool()
+        Party = pool.get('party.party')
+        Identifier = pool.get('party.identifier')
+
+        party = Party(name='test')
+
+        sepa = Identifier(party=party, code='ES23ZZZ47690558N',
+            type='sepa')
+        sepa.save()
+
+        sepa2 = Identifier(party=party, code='ES23ZZZ47690558N',
+            type='sepa')
+        with self.assertRaises(UserError):
+            sepa2.save()
+
+    @with_transaction()
+    def test_sepa_identifier(self):
+        'Test sepa indentifier validation'
+        pool = Pool()
+        Party = pool.get('party.party')
+        Identifier = pool.get('party.identifier')
+
+        party = Party(name='test')
+        sepa = Identifier(party=party, code='BE68539007547034',
+            type='sepa')
+        with self.assertRaises(UserError):
+            sepa.save()
+
+        party2 = Party(name='test2')
+        sepa = Identifier(party=party2, code='007547034',
+            type='sepa')
+        with self.assertRaises(UserError):
+            sepa.save()
+
+        party3 = Party(name='test3')
+        sepa = Identifier(party=party3, code='ES23ZZZ47690558N',
+            type='sepa')
+        sepa.save()
+
+        party4 = Party(name='test4')
+        sepa = Identifier(party=party4, code='ES 23ZZZ 4769 055  8N',
+            type='sepa')
+        sepa.save()
+
+    @with_transaction()
     def test_payment_sepa_bank_account_number(self):
         'Test Payment.sepa_bank_account_number'
         pool = Pool()
@@ -292,9 +341,14 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
         with set_company(company):
             company_account, customer_account = setup_accounts(
                 bank, company, customer)
-            setup_mandate(company, customer, customer_account)
+            mandate = setup_mandate(company, customer, customer_account)
             journal = setup_journal('pain.008.001.02', 'receivable',
                 company, company_account)
+
+            self.assertEqual(mandate.sequence_type, 'FRST')
+            mandate.sequence_type_rcur = True
+            self.assertEqual(mandate.sequence_type, 'RCUR')
+            mandate.sequence_type_rcur = False
 
             payment, = Payment.create([{
                         'company': company,

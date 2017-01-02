@@ -16,6 +16,14 @@ msgid ""
 "state."
 msgstr ""
 
+msgctxt "error:party.identifier:"
+msgid "Party \"%(party)s\" has more than one SEPA Creditor Identifier."
+msgstr ""
+
+msgctxt "error:party.identifier:"
+msgid "The SEPA identifier \"%(code)s\" on party \"%(party)s\" is not valid."
+msgstr ""
+
 msgctxt "field:account.configuration,sepa_mandate_sequence:"
 msgid "SEPA Mandate Sequence"
 msgstr ""
@@ -76,21 +84,25 @@ msgctxt "field:account.payment.sepa.mandate,account_number:"
 msgid "Account Number"
 msgstr ""
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,company:"
 msgid "Company"
-msgstr ""
+msgstr "ຫ້ອງການ/ສຳນັກງານ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,create_date:"
 msgid "Create Date"
-msgstr ""
+msgstr "ສ້າງວັນທີ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,create_uid:"
 msgid "Create User"
-msgstr ""
+msgstr "ສ້າງຜູ້ໃຊ້ງານ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,id:"
 msgid "ID"
-msgstr ""
+msgstr "ເລດລຳດັບ"
 
 msgctxt "field:account.payment.sepa.mandate,identification:"
 msgid "Identification"
@@ -100,93 +112,110 @@ msgctxt "field:account.payment.sepa.mandate,identification_readonly:"
 msgid "Identification Readonly"
 msgstr ""
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,party:"
 msgid "Party"
-msgstr ""
+msgstr "ພາກສ່ວນ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,payments:"
 msgid "Payments"
-msgstr ""
+msgstr "ການຊໍາລະເງິນ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,rec_name:"
 msgid "Name"
-msgstr ""
+msgstr "ຊື່"
 
 msgctxt "field:account.payment.sepa.mandate,scheme:"
 msgid "Scheme"
+msgstr ""
+
+msgctxt "field:account.payment.sepa.mandate,sequence_type_rcur:"
+msgid "Always use RCUR"
 msgstr ""
 
 msgctxt "field:account.payment.sepa.mandate,signature_date:"
 msgid "Signature Date"
 msgstr ""
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,state:"
 msgid "State"
-msgstr ""
+msgstr "ສະຖານະ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,type:"
 msgid "Type"
-msgstr ""
+msgstr "ຮູບແບບ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,write_date:"
 msgid "Write Date"
-msgstr ""
+msgstr "ວັນທີບັນທຶກ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.mandate,write_uid:"
 msgid "Write User"
-msgstr ""
+msgstr "ສ້າງຜູ້ໃຊ້"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,company:"
 msgid "Company"
-msgstr ""
+msgstr "ຫ້ອງການ/ສຳນັກງານ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,create_date:"
 msgid "Create Date"
-msgstr ""
+msgstr "ສ້າງວັນທີ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,create_uid:"
 msgid "Create User"
-msgstr ""
+msgstr "ສ້າງຜູ້ໃຊ້ງານ"
 
 msgctxt "field:account.payment.sepa.message,filename:"
 msgid "Filename"
 msgstr ""
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,id:"
 msgid "ID"
-msgstr ""
+msgstr "ເລດລຳດັບ"
 
 msgctxt "field:account.payment.sepa.message,message:"
 msgid "Message"
 msgstr ""
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,origin:"
 msgid "Origin"
-msgstr ""
+msgstr "ລາຍການຂັ້ນຕົ້ນ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,rec_name:"
 msgid "Name"
-msgstr ""
+msgstr "ຊື່"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,state:"
 msgid "State"
-msgstr ""
+msgstr "ສະຖານະ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,type:"
 msgid "Type"
-msgstr ""
+msgstr "ຮູບແບບ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,write_date:"
 msgid "Write Date"
-msgstr ""
+msgstr "ວັນທີບັນທຶກ"
 
+#, fuzzy
 msgctxt "field:account.payment.sepa.message,write_uid:"
 msgid "Write User"
-msgstr ""
-
-msgctxt "field:party.party,sepa_creditor_identifier:"
-msgid "SEPA Creditor Identifier"
-msgstr ""
+msgstr "ສ້າງຜູ້ໃຊ້"
 
 msgctxt "field:party.party,sepa_creditor_identifier_used:"
 msgid "SEPA Creditor Identifier Used"
@@ -220,22 +249,47 @@ msgctxt "model:ir.action,name:report_mandate"
 msgid "Mandate"
 msgstr ""
 
-msgctxt "model:ir.action.act_window.domain,name:act_message_form_domain_all"
+#, fuzzy
+msgctxt "model:ir.action.act_window.domain,name:act_mandate_form_domain_all"
 msgid "All"
+msgstr "ທັງໝົດ"
+
+#, fuzzy
+msgctxt "model:ir.action.act_window.domain,name:act_mandate_form_domain_draft"
+msgid "Draft"
+msgstr "ຮ່າງກຽມ"
+
+msgctxt ""
+"model:ir.action.act_window.domain,name:act_mandate_form_domain_requested"
+msgid "Requested"
 msgstr ""
 
+#, fuzzy
+msgctxt ""
+"model:ir.action.act_window.domain,name:act_mandate_form_domain_validated"
+msgid "Validated"
+msgstr "ກວດສອບແລ້ວ"
+
+#, fuzzy
+msgctxt "model:ir.action.act_window.domain,name:act_message_form_domain_all"
+msgid "All"
+msgstr "ທັງໝົດ"
+
+#, fuzzy
 msgctxt ""
 "model:ir.action.act_window.domain,name:act_message_form_domain_canceled"
 msgid "Canceled"
-msgstr ""
+msgstr "ຍົກເລີກແລ້ວ"
 
+#, fuzzy
 msgctxt "model:ir.action.act_window.domain,name:act_message_form_domain_done"
 msgid "Done"
-msgstr ""
+msgstr "ແລ້ວໆ"
 
+#, fuzzy
 msgctxt "model:ir.action.act_window.domain,name:act_message_form_domain_draft"
 msgid "Draft"
-msgstr ""
+msgstr "ຮ່າງກຽມ"
 
 msgctxt ""
 "model:ir.action.act_window.domain,name:act_message_form_domain_waiting"
@@ -284,13 +338,15 @@ msgctxt "report:account.payment.sepa.mandate:"
 msgid "By signing this mandate form, you authorize"
 msgstr ""
 
+#, fuzzy
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "City"
-msgstr ""
+msgstr "ບ້ານ"
 
+#, fuzzy
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "Country"
-msgstr ""
+msgstr "ປະເທດ"
 
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "Creditor identifier"
@@ -304,17 +360,19 @@ msgctxt "report:account.payment.sepa.mandate:"
 msgid "Creditor's name"
 msgstr ""
 
+#, fuzzy
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "Date"
-msgstr ""
+msgstr "ວັນທີ:"
 
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "Direct Debit MANDATE"
 msgstr ""
 
+#, fuzzy
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "Location"
-msgstr ""
+msgstr "ບ່ອນຢູ່"
 
 msgctxt "report:account.payment.sepa.mandate:"
 msgid "Name of the debtor"
@@ -398,21 +456,24 @@ msgctxt "selection:account.payment.sepa.mandate,scheme:"
 msgid "Core"
 msgstr ""
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.mandate,state:"
 msgid "Canceled"
-msgstr ""
+msgstr "ຍົກເລີກແລ້ວ"
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.mandate,state:"
 msgid "Draft"
-msgstr ""
+msgstr "ຮ່າງກຽມ"
 
 msgctxt "selection:account.payment.sepa.mandate,state:"
 msgid "Requested"
 msgstr ""
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.mandate,state:"
 msgid "Validated"
-msgstr ""
+msgstr "ກວດສອບແລ້ວ"
 
 msgctxt "selection:account.payment.sepa.mandate,type:"
 msgid "One-off"
@@ -422,17 +483,20 @@ msgctxt "selection:account.payment.sepa.mandate,type:"
 msgid "Recurrent"
 msgstr ""
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.message,state:"
 msgid "Canceled"
-msgstr ""
+msgstr "ຍົກເລີກແລ້ວ"
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.message,state:"
 msgid "Done"
-msgstr ""
+msgstr "ແລ້ວໆ"
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.message,state:"
 msgid "Draft"
-msgstr ""
+msgstr "ຮ່າງກຽມ"
 
 msgctxt "selection:account.payment.sepa.message,state:"
 msgid "Waiting"
@@ -462,54 +526,39 @@ msgctxt "view:account.payment.sepa.mandate:"
 msgid "Are you sure to cancel the mandate?"
 msgstr ""
 
+#, fuzzy
 msgctxt "view:account.payment.sepa.mandate:"
 msgid "Cancel"
-msgstr ""
+msgstr "ຍົກເລີກ"
 
+#, fuzzy
 msgctxt "view:account.payment.sepa.mandate:"
 msgid "Draft"
-msgstr ""
-
-msgctxt "view:account.payment.sepa.mandate:"
-msgid "Mandate"
-msgstr ""
-
-msgctxt "view:account.payment.sepa.mandate:"
-msgid "Mandates"
-msgstr ""
+msgstr "ຮ່າງກຽມ"
 
 msgctxt "view:account.payment.sepa.mandate:"
 msgid "Request"
 msgstr ""
 
+#, fuzzy
 msgctxt "view:account.payment.sepa.mandate:"
 msgid "Validate"
-msgstr ""
+msgstr "ກວດສອບ"
 
+#, fuzzy
 msgctxt "view:account.payment.sepa.message:"
 msgid "Cancel"
-msgstr ""
+msgstr "ຍົກເລີກ"
 
 msgctxt "view:account.payment.sepa.message:"
 msgid "Do"
 msgstr ""
 
+#, fuzzy
 msgctxt "view:account.payment.sepa.message:"
 msgid "Draft"
-msgstr ""
-
-msgctxt "view:account.payment.sepa.message:"
-msgid "SEPA Message"
-msgstr ""
-
-msgctxt "view:account.payment.sepa.message:"
-msgid "SEPA Messages"
-msgstr ""
+msgstr "ຮ່າງກຽມ"
 
 msgctxt "view:account.payment.sepa.message:"
 msgid "Wait"
-msgstr ""
-
-msgctxt "view:party.party:"
-msgid "SEPA"
 msgstr ""
