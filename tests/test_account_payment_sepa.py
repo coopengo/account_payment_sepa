@@ -241,6 +241,7 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
                     })
             self.assertEqual(mandate.identification, None)
 
+            # RSE 20/04/17: We removed the constraint
             self.assertRaises(UserError, Mandate.create, [{
                         'party': party.id,
                         'identification': same_id,
