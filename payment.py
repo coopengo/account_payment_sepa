@@ -285,6 +285,7 @@ class Payment:
         _, operator, value = domain
         # FLA: Temp waiting for tryton 6503
         cast = cls.sepa_end_to_end_id._field.sql_type().base
+        Operator = fields.SQL_OPERATORS[operator]
         query = table.select(table.id,
             where=Operator(table.id.cast(cast), value))
         return [('id', 'in', query)]
