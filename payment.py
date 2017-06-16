@@ -283,7 +283,6 @@ class Payment:
     def search_end_to_end_id(cls, name, domain):
         table = cls.__table__()
         _, operator, value = domain
-        # FLA: Temp waiting for tryton 6503
         cast = cls.sepa_end_to_end_id._field.sql_type().base
         Operator = fields.SQL_OPERATORS[operator]
         query = table.select(table.id,
@@ -666,8 +665,8 @@ class Message(Workflow, ModelSQL, ModelView):
                             [table.message, table.type, table.company,
                                 table.origin, table.state],
                             [[message, 'out', company_id,
-                              'account.payment.group,%s' % group_id,
-                              'done']]))
+                                    'account.payment.group,%s' % group_id,
+                                    'done']]))
                 group_table.drop_column('sepa_message')
 
     @staticmethod
