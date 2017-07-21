@@ -148,6 +148,7 @@ class Group:
         super(Group, cls).__setup__()
         cls._error_messages.update({
                 'no_mandate': 'No valid mandate for payment "%s"',
+                'no_bank_account_number': 'No bank account for payment "%s".',
                 })
         cls._buttons.update({
                 'generate_message': {},
@@ -167,12 +168,17 @@ class Group:
             for payment, mandate in zip(self.payments, mandates):
                 if not mandate:
                     self.raise_user_error('no_mandate', payment.rec_name)
-                # Write one by one becasue mandate.sequence_type must be
+                # Write one by one because mandate.sequence_type must be
                 # recomputed each time
                 Payment.write([payment], {
                         'sepa_mandate': mandate,
                         'sepa_mandate_sequence_type': mandate.sequence_type,
                         })
+        else:
+            for payment in self.payments:
+                if not payment.sepa_bank_account_number:
+                    self.raise_user_error(
+                        'no_bank_account_number', payment.rec_name)
         self.generate_message(_save=False)
 
     @dualmethod
