@@ -220,8 +220,11 @@ class Group:
 
     @property
     def sepa_payments(self):
+        pool = Pool()
+        Payment = pool.get('account.payment')
         keyfunc = self.sepa_group_payment_key
-        payments = sorted(self.payments, key=keyfunc)
+        # re-browse to align cache
+        payments = Payment.browse(sorted(self.payments, key=keyfunc))
         for key, grouped_payments in groupby(payments, key=keyfunc):
             yield dict(key), list(grouped_payments)
 
@@ -419,15 +422,19 @@ class Mandate(Workflow, ModelSQL, ModelView):
                 'cancel': {
                     'invisible': ~Eval('state').in_(
                         ['requested', 'validated']),
+                    'depends': ['state'],
                     },
                 'draft': {
                     'invisible': Eval('state') != 'requested',
+                    'depends': ['state'],
                     },
                 'request': {
                     'invisible': Eval('state') != 'draft',
+                    'depends': ['state'],
                     },
                 'validate_mandate': {
                     'invisible': Eval('state') != 'requested',
+                    'depends': ['state'],
                     },
                 })
         # t = cls.__table__()
@@ -474,6 +481,15 @@ class Mandate(Workflow, ModelSQL, ModelView):
 
     def get_identification_readonly(self, name):
         return bool(self.identification)
+
+    def get_rec_name(self, name):
+        if self.identification:
+            return self.identification
+        return '(%s)' % self.id
+
+    @classmethod
+    def search_rec_name(cls, name, clause):
+        return [tuple(('identification',)) + tuple(clause[1:])]
 
     @classmethod
     def create(cls, vlist):
@@ -637,15 +653,19 @@ class Message(Workflow, ModelSQL, ModelView):
         cls._buttons.update({
                 'cancel': {
                     'invisible': ~Eval('state').in_(['draft', 'waiting']),
+                    'depends': ['state'],
                     },
                 'draft': {
                     'invisible': Eval('state') != 'waiting',
+                    'depends': ['state'],
                     },
                 'wait': {
                     'invisible': Eval('state') != 'draft',
+                    'depends': ['state'],
                     },
                 'do': {
                     'invisible': Eval('state') != 'waiting',
+                    'depends': ['state'],
                     },
                 })
 
