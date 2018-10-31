@@ -261,6 +261,8 @@ class Payment(metaclass=PoolMeta):
     def copy(cls, payments, default=None):
         if default is None:
             default = {}
+        else:
+            default = default.copy()
         default.setdefault('sepa_mandate_sequence_type', None)
         return super(Payment, cls).copy(payments, default=default)
 
@@ -522,8 +524,8 @@ class Mandate(Workflow, ModelSQL, ModelView):
     def copy(cls, mandates, default=None):
         if default is None:
             default = {}
-        default = default.copy()
-        default.setdefault('state', 'draft')
+        else:
+            default = default.copy()
         default.setdefault('payments', [])
         default.setdefault('signature_date', None)
         default.setdefault('identification', None)
@@ -552,7 +554,7 @@ class Mandate(Workflow, ModelSQL, ModelView):
             return 'RCUR'
 
     @classmethod
-    def has_payments(self, mandates, name):
+    def has_payments(cls, mandates, name):
         pool = Pool()
         Payment = pool.get('account.payment')
         payment = Payment.__table__
@@ -677,7 +679,7 @@ class Message(Workflow, ModelSQL, ModelView):
 
         # Migration from 3.2
         if TableHandler.table_exist(Group._table):
-            group_table = TableHandler(Group, module_name)
+            group_table = Group.__table_handler__(module_name)
             if group_table.column_exist('sepa_message'):
                 group = Group.__table__()
                 table = cls.__table__()
