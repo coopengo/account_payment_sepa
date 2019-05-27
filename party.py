@@ -6,9 +6,12 @@ from sql.functions import CurrentTimestamp
 import stdnum.eu.at_02 as sepa
 import stdnum.exceptions
 
+from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import fields
 from trytond.transaction import Transaction
+
+from trytond.modules.party.exceptions import InvalidIdentifierCode
 
 __all__ = ['Party', 'PartyIdentifier']
 
@@ -56,33 +59,21 @@ class PartyIdentifier(metaclass=PoolMeta):
     def __setup__(cls):
         super(PartyIdentifier, cls).__setup__()
         cls.type.selection.append(('sepa', 'SEPA Creditor Identifier'))
-        cls._error_messages.update({
-                'unique_sepa': ('Party "%(party)s" has more than one '
-                    'SEPA Creditor Identifier.'),
-                'sepa_invalid': ('The SEPA identifier "%(code)s" on party '
-                    '"%(party)s" is not valid.'),
-                })
 
     @fields.depends('party', '_parent_party.identifiers')
     def check_code(self):
         super(PartyIdentifier, self).check_code()
         if self.type == 'sepa':
-            for identifier in self.party.identifiers:
-                if identifier.type == 'sepa' and self != identifier:
-                    self.raise_user_error('unique_sepa', {
-                            'invalid_sepa': self.code,
-                            'party': self.party.rec_name,
-                            })
             if not sepa.is_valid(self.code):
                 # Called from pre_validate so party may not be saved yet
                 if self.party and self.party.id > 0:
                     party = self.party.rec_name
                 else:
                     party = ''
-                self.raise_user_error('sepa_invalid', {
-                        'code': self.code,
-                        'party': party,
-                        })
+                raise InvalidIdentifierCode(
+                    gettext('account_payment_sepa.msg_party_invalid_sepa',
+                        code=self.code,
+                        party=party))
 
     @fields.depends('type', 'code')
     def on_change_with_code(self):
