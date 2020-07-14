@@ -7,8 +7,6 @@ from trytond.pyson import Eval
 from trytond.tools.multivalue import migrate_property
 from trytond.modules.company.model import CompanyValueMixin
 
-__all__ = ['Configuration', 'ConfigurationSepaMandateSequence']
-
 
 class Configuration(metaclass=PoolMeta):
     __name__ = 'account.configuration'
@@ -34,8 +32,7 @@ class ConfigurationSepaMandateSequence(ModelSQL, CompanyValueMixin):
 
     @classmethod
     def __register__(cls, module_name):
-        TableHandler = backend.get('TableHandler')
-        exist = TableHandler.table_exist(cls._table)
+        exist = backend.TableHandler.table_exist(cls._table)
 
         super(ConfigurationSepaMandateSequence, cls).__register__(module_name)
 
