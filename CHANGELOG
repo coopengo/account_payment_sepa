@@ -1,5 +1,14 @@
-Version 5.2.1 - 2019-08-17
+Version 5.6.0 - 2020-05-04
 * Bug fixes (see mercurial logs for details)
+* Merge sepa identifier into eu_at_02
+* Allow to customize message_id
+* Include bank account number on mandate rec_name
+* Allow sepa_mandate to be set on draft payments
+
+Version 5.4.0 - 2019-11-04
+* Bug fixes (see mercurial logs for details)
+* Add initiator identifiers on journal
+* Allow to store SEPA message content on the file system
 
 Version 5.2.0 - 2019-05-06
 * Bug fixes (see mercurial logs for details)

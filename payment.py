@@ -11,6 +11,7 @@ import genshi.template
 from lxml import etree
 from sql import Literal
 
+from trytond.config import config
 from trytond.i18n import gettext
 from trytond.pool import PoolMeta, Pool
 from trytond.model import (ModelSQL, ModelView, Workflow, fields, dualmethod,
@@ -25,9 +26,6 @@ from trytond.modules.account_payment.exceptions import ProcessError
 from trytond.modules.company import CompanyReport
 
 from .sepa_handler import CAMT054
-
-__all__ = ['Journal', 'Group', 'Payment', 'Mandate', 'Message',
-    'MandateReport']
 
 # XXX fix: https://genshi.edgewall.org/ticket/582
 from genshi.template.astutil import ASTCodeGenerator, ASTTransformer
@@ -45,6 +43,21 @@ if not hasattr(ASTCodeGenerator, 'visit_NameConstant'):
 if not hasattr(ASTTransformer, 'visit_NameConstant'):
     # Re-use visit_Name because _clone is deleted
     ASTTransformer.visit_NameConstant = ASTTransformer.visit_Name
+
+if config.getboolean('account_payment_sepa', 'filestore', default=False):
+    file_id = 'message_file_id'
+    store_prefix = config.get(
+        'account_payment_sepa', 'store_prefix', default=None)
+else:
+    file_id = None
+    store_prefix = None
+
+INITIATOR_IDS = [
+    (None, ''),
+    ('eu_at_02', "SEPA Creditor Identifier"),
+    ('be_vat', "Belgian Enterprise Number"),
+    ('es_nif', "Spanish VAT Number"),
+    ]
 
 
 class Journal(metaclass=PoolMeta):
@@ -83,6 +96,20 @@ class Journal(metaclass=PoolMeta):
             },
         translate=False,
         depends=['process_method'])
+    sepa_payable_initiator_id = fields.Selection(
+        INITIATOR_IDS, "SEPA Payable Initiator Identifier",
+        states={
+            'invisible': Eval('process_method') != 'sepa',
+            },
+        depends=['process_method'],
+        help="The identifier used for the initiating party.")
+    sepa_receivable_initiator_id = fields.Selection(
+        INITIATOR_IDS, "SEPA Receivable Initiator Identifier",
+        states={
+            'invisible': Eval('process_method') != 'sepa',
+            },
+        depends=['process_method'],
+        help="The identifier used for the initiating party.")
     sepa_batch_booking = fields.Boolean('Batch Booking', states={
             'invisible': Eval('process_method') != 'sepa',
             },
@@ -104,6 +131,20 @@ class Journal(metaclass=PoolMeta):
         sepa_method = ('sepa', 'SEPA')
         if sepa_method not in cls.process_method.selection:
             cls.process_method.selection.append(sepa_method)
+
+    @classmethod
+    def __register__(cls, module_name):
+        cursor = Transaction().connection.cursor()
+        sql_table = cls.__table__()
+        super().__register__(module_name)
+
+        # Migration from 5.4: sepa identifier merged into eu_at_02
+        for name in {'payable', 'receivable'}:
+            column = getattr(sql_table, 'sepa_%s_initiator_id' % name)
+            cursor.execute(*sql_table.update(
+                    columns=[column],
+                    values=['eu_at_02'],
+                    where=column == 'sepa'))
 
     @classmethod
     def default_company_party(cls):
@@ -197,7 +238,7 @@ class Group(metaclass=PoolMeta):
                 group.sepa_messages = ()
             message = tmpl.generate(group=group,
                 datetime=datetime, normalize=unicodedata.normalize,
-                ).filter(remove_comment).render()
+                ).filter(remove_comment).render().encode('utf8')
             message = Message(message=message, type='out', state='waiting',
                 company=group.company)
             group.sepa_messages += (message,)
@@ -231,17 +272,30 @@ class Group(metaclass=PoolMeta):
         for key, grouped_payments in groupby(payments, key=keyfunc):
             yield dict(key), list(grouped_payments)
 
+    @property
+    def sepa_message_id(self):
+        return self.number
+
 
 class Payment(metaclass=PoolMeta):
     __name__ = 'account.payment'
 
     sepa_mandate = fields.Many2One('account.payment.sepa.mandate', 'Mandate',
         ondelete='RESTRICT',
+        states={
+            'readonly': Eval('state') != 'draft',
+            'invisible': ((Eval('process_method') != 'sepa')
+                | (Eval('kind') != 'receivable')),
+            },
         domain=[
             ('party', '=', Eval('party', -1)),
             ('company', '=', Eval('company', -1)),
+            If(Eval('state') == 'draft',
+                ('state', '=', 'validated'),
+                (),
+                )
             ],
-        depends=['party', 'company'])
+        depends=['party', 'company', 'state', 'process_method', 'kind'])
     sepa_mandate_sequence_type = fields.Char('Mandate Sequence Type',
         readonly=True)
     sepa_return_reason_code = fields.Char('Return Reason Code', readonly=True,
@@ -333,6 +387,14 @@ class Payment(metaclass=PoolMeta):
         if not date:
             date = Transaction().context.get('date_value')
         return super(Payment, self).create_clearing_move(date=date)
+
+    @classmethod
+    def view_attributes(cls):
+        return super().view_attributes() + [
+            ('//separator[@id="sepa_return_reason"]', 'states', {
+                    'invisible': Eval('state') != 'failed',
+                    }),
+            ]
 
 
 class Mandate(Workflow, ModelSQL, ModelView):
@@ -483,13 +545,23 @@ class Mandate(Workflow, ModelSQL, ModelView):
         return bool(self.identification)
 
     def get_rec_name(self, name):
+        name = '(%s)' % self.id
         if self.identification:
-            return self.identification
-        return '(%s)' % self.id
+            name = self.identification
+        if self.account_number:
+            name += ' @ %s' % self.account_number.rec_name
+        return name
 
     @classmethod
     def search_rec_name(cls, name, clause):
-        return [tuple(('identification',)) + tuple(clause[1:])]
+        if clause[1].startswith('!') or clause[1].startswith('not '):
+            bool_op = 'AND'
+        else:
+            bool_op = 'OR'
+        return [bool_op,
+            ('identification',) + tuple(clause[1:]),
+            ('account_number',) + tuple(clause[1:]),
+            ]
 
     @classmethod
     def create(cls, vlist):
@@ -618,7 +690,10 @@ class Message(Workflow, ModelSQL, ModelView):
         'readonly': Eval('state') != 'draft',
         }
     _depends = ['state']
-    message = fields.Text('Message', states=_states, depends=_depends)
+    message = fields.Binary('Message', filename='filename',
+        file_id=file_id, store_prefix=store_prefix,
+        states=_states, depends=_depends)
+    message_file_id = fields.Char("Message File ID", readonly=True)
     filename = fields.Function(fields.Char('Filename'), 'get_filename')
     type = fields.Selection([
             ('in', 'IN'),
@@ -674,7 +749,6 @@ class Message(Workflow, ModelSQL, ModelView):
 
     @classmethod
     def __register__(cls, module_name):
-        TableHandler = backend.get('TableHandler')
         cursor = Transaction().connection.cursor()
         pool = Pool()
         Group = pool.get('account.payment.group')
@@ -682,7 +756,7 @@ class Message(Workflow, ModelSQL, ModelView):
         super(Message, cls).__register__(module_name)
 
         # Migration from 3.2
-        if TableHandler.table_exist(Group._table):
+        if backend.TableHandler.table_exist(Group._table):
             group_table = Group.__table_handler__(module_name)
             if group_table.column_exist('sepa_message'):
                 group = Group.__table__()
@@ -693,7 +767,8 @@ class Message(Workflow, ModelSQL, ModelView):
                     cursor.execute(*table.insert(
                             [table.message, table.type, table.company,
                                 table.origin, table.state],
-                            [[message, 'out', company_id,
+                            [[
+                                    message, 'out', company_id,
                                     'account.payment.group,%s' % group_id,
                                     'done']]))
                 group_table.drop_column('sepa_message')
@@ -782,9 +857,8 @@ class Message(Workflow, ModelSQL, ModelView):
                 return tag.namespace
 
     def parse(self):
-        message = self.message.encode('utf-8')
-        f = BytesIO(message)
-        namespace = self.get_namespace(message)
+        f = BytesIO(self.message)
+        namespace = self.get_namespace(self.message)
         handlers = self._get_handlers()
         if namespace not in handlers:
             raise  # TODO UserError
