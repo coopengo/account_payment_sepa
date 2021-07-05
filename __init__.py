@@ -15,6 +15,7 @@ def register():
         payment.Message,
         party.Party,
         party.PartyIdentifier,
+        party.Replace,
         account.Configuration,
         account.ConfigurationSepaMandateSequence,
         module='account_payment_sepa', type_='model')
