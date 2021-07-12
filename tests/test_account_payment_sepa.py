@@ -15,7 +15,8 @@ from trytond.modules.account_payment_sepa.payment import CAMT054
 from trytond.pool import Pool
 
 from trytond.modules.currency.tests import create_currency
-from trytond.modules.company.tests import create_company, set_company
+from trytond.modules.company.tests import (
+    create_company, set_company, CompanyTestMixin)
 from trytond.modules.account.tests import create_chart
 
 
@@ -36,7 +37,7 @@ def setup_environment():
     bank = Bank(party=bank_party, bic='BICODEBBXXX')
     bank.save()
     customer = Party(name='Customer')
-    address = Address(street='street', zip='1234', city='City')
+    address = Address(street='street', postal_code='1234', city='City')
     customer.addresses = [address]
     customer.save()
     return {
@@ -132,7 +133,8 @@ def validate_file(flavor, kind, xsd=None):
 
         session_id, _, _ = ProcessPayment.create()
         process_payment = ProcessPayment(session_id)
-        with Transaction().set_context(active_ids=[payment.id]):
+        with Transaction().set_context(
+                active_model=Payment.__name__, active_ids=[payment.id]):
             _, data = process_payment.do_process(None)
         group, = PaymentGroup.browse(data['res_id'])
         message, = group.sepa_messages
@@ -146,7 +148,7 @@ def validate_file(flavor, kind, xsd=None):
         schema.assertValid(sepa_xml)
 
 
-class AccountPaymentSepaTestCase(ModuleTestCase):
+class AccountPaymentSepaTestCase(CompanyTestMixin, ModuleTestCase):
     'Test Account Payment SEPA module'
     module = 'account_payment_sepa'
 
@@ -186,6 +188,7 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
         pool = Pool()
         Configuration = pool.get('account.configuration')
         Sequence = pool.get('ir.sequence')
+        SequenceType = pool.get('ir.sequence.type')
         Party = pool.get('party.party')
         Mandate = pool.get('account.payment.sepa.mandate')
 
@@ -198,8 +201,10 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
             mandate.save()
             self.assertFalse(mandate.identification)
 
-            sequence = Sequence(name='Test',
-                code='account.payment.sepa.mandate')
+            sequence_type, = SequenceType.search([
+                    ('name', '=', "SEPA Mandate"),
+                    ], limit=1)
+            sequence = Sequence(name="Test", sequence_type=sequence_type)
             sequence.save()
             config = Configuration(1)
             config.sepa_mandate_sequence = sequence
@@ -313,7 +318,8 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
 
             session_id, _, _ = ProcessPayment.create()
             process_payment = ProcessPayment(session_id)
-            with Transaction().set_context(active_ids=[payment.id]):
+            with Transaction().set_context(
+                    active_model=Payment.__name__, active_ids=[payment.id]):
                 _, data = process_payment.do_process(None)
 
             self.assertEqual(payment.sepa_mandate_sequence_type, 'FRST')
@@ -342,7 +348,8 @@ class AccountPaymentSepaTestCase(ModuleTestCase):
             session_id, _, _ = ProcessPayment.create()
             process_payment = ProcessPayment(session_id)
             payment_ids = [p.id for p in payments]
-            with Transaction().set_context(active_ids=payment_ids):
+            with Transaction().set_context(
+                    active_model=Payment.__name__, active_ids=payment_ids):
                 _, data = process_payment.do_process(None)
 
             for payment in payments:

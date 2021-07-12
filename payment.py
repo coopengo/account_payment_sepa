@@ -19,7 +19,7 @@ from trytond.model import (ModelSQL, ModelView, Workflow, fields, dualmethod,
 from trytond.model.exceptions import AccessError
 from trytond.pyson import Eval, If
 from trytond.transaction import Transaction
-from trytond.tools import reduce_ids, grouped_slice
+from trytond.tools import reduce_ids, grouped_slice, sortable_values
 from trytond import backend
 
 from trytond.modules.account_payment.exceptions import ProcessError
@@ -62,8 +62,13 @@ INITIATOR_IDS = [
 
 class Journal(metaclass=PoolMeta):
     __name__ = 'account.payment.journal'
-    company_party = fields.Function(fields.Many2One('party.party',
-            'Company Party'), 'on_change_with_company_party')
+    company_party = fields.Function(fields.Many2One(
+            'party.party', "Company Party",
+            context={
+                'company': Eval('company', -1),
+                },
+            depends=['company']),
+        'on_change_with_company_party')
     sepa_bank_account_number = fields.Many2One('bank.account.number',
         'Bank Account Number', states={
             'required': Eval('process_method') == 'sepa',
@@ -268,7 +273,8 @@ class Group(metaclass=PoolMeta):
         Payment = pool.get('account.payment')
         keyfunc = self.sepa_group_payment_key
         # re-browse to align cache
-        payments = Payment.browse(sorted(self.payments, key=keyfunc))
+        payments = Payment.browse(sorted(
+                self.payments, key=sortable_values(keyfunc)))
         for key, grouped_payments in groupby(payments, key=keyfunc):
             yield dict(key), list(grouped_payments)
 
@@ -300,17 +306,19 @@ class Payment(metaclass=PoolMeta):
         readonly=True)
     sepa_return_reason_code = fields.Char('Return Reason Code', readonly=True,
         states={
-            'invisible': (~Eval('sepa_return_reason_code')
-                & (Eval('state') != 'failed')),
+            'invisible': ((Eval('process_method') != 'sepa')
+                | (~Eval('sepa_return_reason_code')
+                    & (Eval('state') != 'failed'))),
             },
-        depends=['state'])
+        depends=['process_method', 'state'])
     sepa_return_reason_information = fields.Text('Return Reason Information',
         readonly=True,
         states={
-            'invisible': (~Eval('sepa_return_reason_information')
-                & (Eval('state') != 'failed')),
+            'invisible': ((Eval('process_method') != 'sepa')
+                | (~Eval('sepa_return_reason_information')
+                    & (Eval('state') != 'failed'))),
             },
-        depends=['state'])
+        depends=['process_method', 'state'])
     sepa_end_to_end_id = fields.Function(fields.Char('SEPA End To End ID'),
         'get_sepa_end_to_end_id', searcher='search_end_to_end_id')
     sepa_instruction_id = fields.Function(fields.Char('SEPA Instruction ID'),
@@ -364,7 +372,7 @@ class Payment(metaclass=PoolMeta):
         if self.description:
             return self.description
         elif self.line and self.line.move_origin:
-            return self.line.move_origin.rec_name
+            return getattr(self.line.move_origin, 'rec_name', '')
 
     @property
     def sepa_bank_account_number(self):
@@ -392,7 +400,8 @@ class Payment(metaclass=PoolMeta):
     def view_attributes(cls):
         return super().view_attributes() + [
             ('//separator[@id="sepa_return_reason"]', 'states', {
-                    'invisible': Eval('state') != 'failed',
+                    'invisible': ((Eval('process_method') != 'sepa')
+                        | (Eval('state') != 'failed')),
                     }),
             ]
 
@@ -403,13 +412,18 @@ class Mandate(Workflow, ModelSQL, ModelView):
     party = fields.Many2One('party.party', 'Party', required=True, select=True,
         states={
             'readonly': Eval('state').in_(
-                ['requested', 'validated', 'canceled']),
+                ['requested', 'validated', 'cancelled']),
             },
-        depends=['state'])
+        context={
+            'company': Eval('company', -1),
+            },
+        depends=['state', 'company'])
     account_number = fields.Many2One('bank.account.number', 'Account Number',
         ondelete='RESTRICT',
         states={
-            'readonly': Eval('state').in_(['validated', 'canceled']),
+            'readonly': (
+                Eval('state').in_(['validated', 'cancelled'])
+                | ~Eval('party')),
             'required': Eval('state') == 'validated',
             },
         domain=[
@@ -425,12 +439,8 @@ class Mandate(Workflow, ModelSQL, ModelView):
         depends=['state', 'identification_readonly'])
     identification_readonly = fields.Function(fields.Boolean(
             'Identification Readonly'), 'get_identification_readonly')
-    company = fields.Many2One('company.company', 'Company', required=True,
-        select=True,
-        domain=[
-            ('id', If(Eval('context', {}).contains('company'), '=', '!='),
-                Eval('context', {}).get('company', -1)),
-            ],
+    company = fields.Many2One(
+        'company.company', "Company", required=True, select=True,
         states={
             'readonly': Eval('state') != 'draft',
             },
@@ -440,7 +450,7 @@ class Mandate(Workflow, ModelSQL, ModelView):
             ('one-off', 'One-off'),
             ], 'Type',
         states={
-            'readonly': Eval('state').in_(['validated', 'canceled']),
+            'readonly': Eval('state').in_(['validated', 'cancelled']),
             },
         depends=['state'])
     sequence_type_rcur = fields.Boolean(
@@ -454,13 +464,13 @@ class Mandate(Workflow, ModelSQL, ModelView):
             ('B2B', 'Business to Business'),
             ], 'Scheme', required=True,
         states={
-            'readonly': Eval('state').in_(['validated', 'canceled']),
+            'readonly': Eval('state').in_(['validated', 'cancelled']),
             },
         depends=['state'])
     scheme_string = scheme.translated('scheme')
     signature_date = fields.Date('Signature Date',
         states={
-            'readonly': Eval('state').in_(['validated', 'canceled']),
+            'readonly': Eval('state').in_(['validated', 'cancelled']),
             'required': Eval('state') == 'validated',
             },
         depends=['state'])
@@ -468,7 +478,7 @@ class Mandate(Workflow, ModelSQL, ModelView):
             ('draft', 'Draft'),
             ('requested', 'Requested'),
             ('validated', 'Validated'),
-            ('canceled', 'Canceled'),
+            ('cancelled', 'Cancelled'),
             ], 'State', readonly=True)
     payments = fields.One2Many('account.payment', 'sepa_mandate', 'Payments')
     has_payments = fields.Function(fields.Boolean('Has Payments'),
@@ -480,8 +490,8 @@ class Mandate(Workflow, ModelSQL, ModelView):
         cls._transitions |= set((
                 ('draft', 'requested'),
                 ('requested', 'validated'),
-                ('validated', 'canceled'),
-                ('requested', 'canceled'),
+                ('validated', 'cancelled'),
+                ('requested', 'cancelled'),
                 ('requested', 'draft'),
                 ))
         cls._buttons.update({
@@ -514,9 +524,26 @@ class Mandate(Workflow, ModelSQL, ModelView):
         #         'account_payment_sepa.msg_mandate_unique_id'),
         #     ]
 
+    @classmethod
+    def __register__(cls, module_name):
+        cursor = Transaction().connection.cursor()
+        table = cls.__table__()
+
+        super().__register__(module_name)
+
+        # Migration from 5.6: rename state canceled to cancelled
+        cursor.execute(*table.update(
+                [table.state], ['cancelled'],
+                where=table.state == 'canceled'))
+
     @staticmethod
     def default_company():
         return Transaction().context.get('company')
+
+    @fields.depends('company')
+    def on_change_company(self):
+        self.identification_readonly = self.default_identification_readonly(
+            company=self.company.id if self.company else None)
 
     @staticmethod
     def default_type():
@@ -534,12 +561,12 @@ class Mandate(Workflow, ModelSQL, ModelView):
     def default_state():
         return 'draft'
 
-    @staticmethod
-    def default_identification_readonly():
+    @classmethod
+    def default_identification_readonly(cls, **pattern):
         pool = Pool()
         Configuration = pool.get('account.configuration')
         config = Configuration(1)
-        return bool(config.sepa_mandate_sequence)
+        return bool(config.get_multivalue('sepa_mandate_sequence', **pattern))
 
     def get_identification_readonly(self, name):
         return bool(self.identification)
@@ -566,16 +593,17 @@ class Mandate(Workflow, ModelSQL, ModelView):
     @classmethod
     def create(cls, vlist):
         pool = Pool()
-        Sequence = pool.get('ir.sequence')
         Configuration = pool.get('account.configuration')
 
         config = Configuration(1)
         vlist = [v.copy() for v in vlist]
+        default_company = cls.default_company()
         for values in vlist:
             if (config.sepa_mandate_sequence
                     and not values.get('identification')):
-                values['identification'] = Sequence.get_id(
-                    config.sepa_mandate_sequence.id)
+                values['identification'] = config.get_multivalue(
+                    'sepa_mandate_sequence',
+                    company=values.get('company', default_company)).get()
             # Prevent raising false unique constraint
             if values.get('identification') == '':
                 values['identification'] = None
@@ -639,7 +667,7 @@ class Mandate(Workflow, ModelSQL, ModelView):
             cursor.execute(*payment.select(payment.sepa_mandate, Literal(True),
                     where=red_sql,
                     group_by=payment.sepa_mandate))
-            has_payments.update(cursor.fetchall())
+            has_payments.update(cursor)
 
         return {'has_payments': has_payments}
 
@@ -663,18 +691,18 @@ class Mandate(Workflow, ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    @Workflow.transition('canceled')
+    @Workflow.transition('cancelled')
     def cancel(cls, mandates):
-        # TODO must be automaticaly canceled 13 months after last collection
+        # TODO must be automaticaly cancelled 13 months after last collection
         pass
 
     @classmethod
     def delete(cls, mandates):
         for mandate in mandates:
-            if mandate.state not in ('draft', 'canceled'):
+            if mandate.state not in ('draft', 'cancelled'):
                 raise AccessError(
                     gettext('account_payment_sepa'
-                        '.msg_mandate_delete_draft_canceled',
+                        '.msg_mandate_delete_draft_cancelled',
                         mandate=mandate.rec_name))
         super(Mandate, cls).delete(mandates)
 
@@ -699,12 +727,8 @@ class Message(Workflow, ModelSQL, ModelView):
             ('in', 'IN'),
             ('out', 'OUT'),
             ], 'Type', required=True, states=_states, depends=_depends)
-    company = fields.Many2One('company.company', 'Company', required=True,
-        select=True,
-        domain=[
-            ('id', If(Eval('context', {}).contains('company'), '=', '!='),
-                Eval('context', {}).get('company', -1)),
-            ],
+    company = fields.Many2One(
+        'company.company', "Company", required=True, select=True,
         states={
             'readonly': Eval('state') != 'draft',
             },
@@ -715,7 +739,7 @@ class Message(Workflow, ModelSQL, ModelView):
             ('draft', 'Draft'),
             ('waiting', 'Waiting'),
             ('done', 'Done'),
-            ('canceled', 'Canceled'),
+            ('cancelled', 'Cancelled'),
             ], 'State', readonly=True, select=True)
 
     @classmethod
@@ -725,8 +749,8 @@ class Message(Workflow, ModelSQL, ModelView):
             ('draft', 'waiting'),
             ('waiting', 'done'),
             ('waiting', 'draft'),
-            ('draft', 'canceled'),
-            ('waiting', 'canceled'),
+            ('draft', 'cancelled'),
+            ('waiting', 'cancelled'),
             }
         cls._buttons.update({
                 'cancel': {
@@ -749,9 +773,12 @@ class Message(Workflow, ModelSQL, ModelView):
 
     @classmethod
     def __register__(cls, module_name):
-        cursor = Transaction().connection.cursor()
         pool = Pool()
         Group = pool.get('account.payment.group')
+        transaction = Transaction()
+        cursor = transaction.connection.cursor()
+        update = transaction.connection.cursor()
+        table = cls.__table__()
 
         super(Message, cls).__register__(module_name)
 
@@ -760,11 +787,10 @@ class Message(Workflow, ModelSQL, ModelView):
             group_table = Group.__table_handler__(module_name)
             if group_table.column_exist('sepa_message'):
                 group = Group.__table__()
-                table = cls.__table__()
                 cursor.execute(*group.select(
                         group.id, group.sepa_message, group.company))
-                for group_id, message, company_id in cursor.fetchall():
-                    cursor.execute(*table.insert(
+                for group_id, message, company_id in cursor:
+                    update.execute(*table.insert(
                             [table.message, table.type, table.company,
                                 table.origin, table.state],
                             [[
@@ -772,6 +798,11 @@ class Message(Workflow, ModelSQL, ModelView):
                                     'account.payment.group,%s' % group_id,
                                     'done']]))
                 group_table.drop_column('sepa_message')
+
+        # Migration from 5.6: rename state canceled to cancelled
+        cursor.execute(*table.update(
+                [table.state], ['cancelled'],
+                where=table.state == 'canceled'))
 
     @staticmethod
     def default_type():
@@ -799,11 +830,9 @@ class Message(Workflow, ModelSQL, ModelView):
     @classmethod
     def get_origin(cls):
         IrModel = Pool().get('ir.model')
+        get_name = IrModel.get_name
         models = cls._get_origin()
-        models = IrModel.search([
-                ('model', 'in', models),
-                ])
-        return [(None, '')] + [(m.model, m.name) for m in models]
+        return [(None, '')] + [(m, get_name(m)) for m in models]
 
     @classmethod
     @ModelView.button
@@ -829,7 +858,7 @@ class Message(Workflow, ModelSQL, ModelView):
 
     @classmethod
     @ModelView.button
-    @Workflow.transition('canceled')
+    @Workflow.transition('cancelled')
     def cancel(cls, messages):
         pass
 
