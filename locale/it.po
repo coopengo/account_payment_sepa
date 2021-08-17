@@ -220,9 +220,10 @@ msgctxt "model:ir.action.act_window.domain,name:act_message_form_domain_all"
 msgid "All"
 msgstr "Tutti"
 
+#, fuzzy
 msgctxt ""
-"model:ir.action.act_window.domain,name:act_message_form_domain_canceled"
-msgid "Canceled"
+"model:ir.action.act_window.domain,name:act_message_form_domain_cancelled"
+msgid "Cancelled"
 msgstr "Annullati"
 
 msgctxt "model:ir.action.act_window.domain,name:act_message_form_domain_done"
@@ -243,7 +244,8 @@ msgctxt ""
 msgid "Receivable with Mandate"
 msgstr "Ricevibili con mandato"
 
-msgctxt "model:ir.message,text:msg_mandate_delete_draft_canceled"
+#, fuzzy
+msgctxt "model:ir.message,text:msg_mandate_delete_draft_cancelled"
 msgid ""
 "To delete mandate \"%(mandate)s\" you must cancel it or reset its state to "
 "draft."
@@ -316,18 +318,18 @@ msgstr "Do"
 
 msgctxt "model:ir.model.button,string:message_draft_button"
 msgid "Draft"
-msgstr "Draft"
+msgstr "Bozza"
 
 msgctxt "model:ir.model.button,string:message_wait_button"
 msgid "Wait"
 msgstr "Wait"
 
-msgctxt "model:ir.rule.group,name:rule_group_mandate"
-msgid "User in company"
+msgctxt "model:ir.rule.group,name:rule_group_mandate_companies"
+msgid "User in companies"
 msgstr ""
 
-msgctxt "model:ir.rule.group,name:rule_group_message"
-msgid "User in company"
+msgctxt "model:ir.rule.group,name:rule_group_message_companies"
+msgid "User in companies"
 msgstr ""
 
 msgctxt "model:ir.sequence.type,name:sequence_type_mandate"
@@ -512,8 +514,9 @@ msgctxt "selection:account.payment.sepa.mandate,scheme:"
 msgid "Core"
 msgstr "Funzionalità base"
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.mandate,state:"
-msgid "Canceled"
+msgid "Cancelled"
 msgstr "Annullato"
 
 msgctxt "selection:account.payment.sepa.mandate,state:"
@@ -536,8 +539,9 @@ msgctxt "selection:account.payment.sepa.mandate,type:"
 msgid "Recurrent"
 msgstr "Ricorrente"
 
+#, fuzzy
 msgctxt "selection:account.payment.sepa.message,state:"
-msgid "Canceled"
+msgid "Cancelled"
 msgstr "Annullato"
 
 msgctxt "selection:account.payment.sepa.message,state:"
