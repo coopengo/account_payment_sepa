@@ -70,6 +70,7 @@ class CAMT054(SEPAHandler):
                     ('kind', '=', self.get_payment_kind(element)),
                     ])
             if payments:
+                # for more details https://support.coopengo.com/issues/21796
                 return payments
         end_to_end_id = details.find('.//{%s}EndToEndId' % tag.namespace)
         if end_to_end_id is not None:
