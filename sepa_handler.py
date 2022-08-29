@@ -70,7 +70,6 @@ class CAMT054(SEPAHandler):
                     date_value = self.date_value(transaction)
                     succeeded.setdefault(date_value, []).extend(payments)
 
-        print(failed, succeeded)
         if failed:
             self.Payment.save(failed)
             self.Payment.fail(failed)
