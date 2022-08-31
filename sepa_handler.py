@@ -103,7 +103,12 @@ class CAMT054(SEPAHandler):
                             ('sepa_instruction_id', '=', instr_id.text),
                             ('kind', '=', payment_kind),
                             ]))
-            elif end_to_end_id is not None:
+                # JCA : In some case we can receive a bad Instruction ID, but a
+                # good end to end id, so we should try both
+                # https://support.coopengo.com/issues/21796
+                if payments:
+                    return payments
+            if end_to_end_id is not None:
                 payments.extend(self.Payment.search([
                             ('sepa_end_to_end_id', '=', end_to_end_id.text),
                             ('kind', '=', payment_kind),
