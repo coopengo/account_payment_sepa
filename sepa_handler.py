@@ -36,7 +36,7 @@ class CAMT054(SEPAHandler):
 
     def handle_entry(self, element):
         tag = etree.QName(element)
-        failed, succeeded = [], {}
+        failed, succeeded = [], []
         ntry_detail = element.find('./{%s}NtryDtls' % tag.namespace)
         if ntry_detail is None:
             # Version 1 doesn't have NtryDtls but directly TxDtls
@@ -46,6 +46,7 @@ class CAMT054(SEPAHandler):
         cdtdbtind_path = './/{%s}CdtDbtInd' % tag.namespace
 
         payment_kind = self.get_payment_kind(element)
+        date_value = self.date_value(element)
 
         for detail in element.findall(details_path):
             if ntry_detail is None:
@@ -67,16 +68,14 @@ class CAMT054(SEPAHandler):
                         self.set_return_information(payment, transaction)
                     failed.extend(payments)
                 else:
-                    date_value = self.date_value(transaction)
-                    succeeded.setdefault(date_value, []).extend(payments)
+                    succeeded.extend(payments)
 
         if failed:
             self.Payment.save(failed)
             self.Payment.fail(failed)
         if succeeded:
-            for date_value, payments in succeeded.items():
-                with Transaction().set_context(date_value=date_value):
-                    self.Payment.succeed(payments)
+            with Transaction().set_context(date_value=date_value):
+                self.Payment.succeed(payments)
 
     def get_payment_kind(self, element):
         tag = etree.QName(element)
